@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/jroimartin/gocui"
 	"github.com/pilanias/go_wallet_genrater/bip39"
 	"github.com/pkg/errors"
 	"github.com/schollz/progressbar/v3"
@@ -140,7 +139,7 @@ func deriveWallet(seed []byte, path accounts.DerivationPath) (*ecdsa.PrivateKey,
 	return privateKey.ToECDSA(), nil
 }
 
-func startGeneration(g *gocui.Gui) {
+func startGenration() {
 	// Start timer
 	startTime = time.Now()
 	// Initialize progress bar
@@ -148,7 +147,7 @@ func startGeneration(g *gocui.Gui) {
 
 	for i := 0; i < ConcurrencyLevel; i++ {
 		wg.Add(1)
-		go generateWallets(bar, g)
+		go generateWallets(bar)
 	}
 
 	wg.Wait()
@@ -159,113 +158,38 @@ func startGeneration(g *gocui.Gui) {
 }
 
 func main() {
-	// Initialize gocui
-	g, err := gocui.NewGui(gocui.OutputNormal)
-	if err != nil {
-		fmt.Println("Error initializing gocui:", err)
-		return
-	}
-	defer g.Close()
-
-	// Set gocui options and keybindings
-	g.SetManagerFunc(layout)
-	if err := keybindings(g); err != nil {
-		fmt.Println("Error setting keybindings:", err)
-		return
-	}
-
 	// Update addresses when the program starts
 
-	// Start generation
-	go startGeneration(g)
-
-	// Run gocui main loop
-	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
-		fmt.Println("Error running gocui main loop:", err)
-		return
-	}
+	startGenration()
 
 	// Clear addresses on exit or program interruption
 
-}
-
-// layout is the gocui layout function.
-func layout(g *gocui.Gui) error {
-	maxX, maxY := g.Size()
-	if v, err := g.SetView("progress", 0, 0, maxX, maxY-2); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.Title = "Progress"
-		v.Autoscroll = true
-		v.Wrap = true
-	}
-
-	if v, err := g.SetView("log", 0, maxY-2, maxX, maxY); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.Title = "Log"
-		v.Autoscroll = true
-		v.Wrap = true
-	}
-
-	return nil
-}
-
-// keybindings sets the gocui keybindings.
-func keybindings(g *gocui.Gui) error {
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// quit is the function to quit the program.
-func quit(g *gocui.Gui, v *gocui.View) error {
-	// Clear addresses on exit or program interruption
-
-	return gocui.ErrQuit
 }
 
 // generateWallets generates the wallets and checks for target addresses.
-func generateWallets(bar *progressbar.ProgressBar, g *gocui.Gui) {
+func generateWallets(bar *progressbar.ProgressBar) {
 	defer wg.Done()
 	for i := 0; i < TotalWallets/ConcurrencyLevel; i++ {
 		wallet, err := NewWallet()
 		if err != nil {
-			g.Update(func(g *gocui.Gui) error {
-				v, _ := g.View("log")
-				fmt.Fprintln(v, "Error generating wallet:", err)
-				return nil
-			})
+			fmt.Println("Error generating wallet:", err)
 			continue
 		}
 
 		mu.Lock()
-		g.Update(func(g *gocui.Gui) error {
-			v, _ := g.View("log")
-			fmt.Fprintln(v, "Mnemonic:", wallet.Mnemonic)
-			fmt.Fprintln(v, "Address:", wallet.Address)
-			return nil
-		})
+		fmt.Println("Mnemonic:", wallet.Mnemonic)
+		fmt.Println("Address:", wallet.Address)
 		mu.Unlock()
 
 		// Check if the generated wallet's address starts with any target address prefix
 
 		for _, target := range bip39.TargetAddresses {
 			if strings.HasPrefix(wallet.Address, target) {
-				g.Update(func(g *gocui.Gui) error {
-					v, _ := g.View("log")
-					fmt.Fprintln(v, "\nTarget address found!")
-					fmt.Fprintln(v, "Address:", wallet.Address)
-					fmt.Fprintln(v, "Mnemonic:", wallet.Mnemonic)
-					return nil
-				})
+				fmt.Println("\nTarget address found!")
+				fmt.Println("Address:", wallet.Address)
+				fmt.Println("Mnemonic:", wallet.Mnemonic)
 				// Exit the program
 				// Wait for 2 seconds before exiting
-				time.Sleep(2 * time.Second)
 				os.Exit(0)
 			}
 		}
