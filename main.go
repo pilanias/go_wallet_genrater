@@ -22,15 +22,9 @@ import (
 
 const (
 	TotalWallets        = 4000
-	ConcurrencyLevel    = 500 // Adjust this based on your machine's capabilities
+	ConcurrencyLevel    = 500
 	DefaultMnemonicBits = 128
 )
-
-// Generator is a function that generates a wallet.
-type Generator func() (*Wallet, error)
-
-// DefaultGenerator is the default wallet generator.
-var DefaultGenerator = NewGeneratorMnemonic(DefaultMnemonicBits)
 
 var (
 	wg        sync.WaitGroup
@@ -40,12 +34,84 @@ var (
 
 // Wallet represents a generated wallet.
 type Wallet struct {
+	gorm.Model
 	Address    string
 	PrivateKey string
 	Mnemonic   string
 	HDPath     string
-	gorm.Model
-	Bits int
+	Bits       int
+}
+
+// Generator is a function that generates a wallet.
+type Generator func() (*Wallet, error)
+
+// DefaultGenerator is the default wallet generator.
+var DefaultGenerator = NewGeneratorMnemonic(DefaultMnemonicBits)
+
+func main() {
+	startGeneration()
+}
+
+func startGeneration() {
+	startTime = time.Now()
+	bar := progressbar.Default(int64(TotalWallets))
+
+	for i := 0; i < ConcurrencyLevel; i++ {
+		wg.Add(1)
+		go generateWallets(bar)
+	}
+
+	wg.Wait()
+	printSummary()
+}
+
+func printSummary() {
+	totalTime := time.Since(startTime).Seconds()
+	walletsPerSecond := float64(TotalWallets) / totalTime
+
+	fmt.Printf("\nTotal time taken: %.2f seconds\n", totalTime)
+	fmt.Printf("Wallets per second: %.2f\n", walletsPerSecond)
+}
+
+func generateWallets(bar *progressbar.ProgressBar) {
+	defer wg.Done()
+
+	for i := 0; i < TotalWallets/ConcurrencyLevel; i++ {
+		wallet, err := NewWallet()
+		if err != nil {
+			fmt.Println("Error generating wallet:", err)
+			continue
+		}
+
+		printWalletDetails(wallet)
+
+		if checkTargetAddresses(wallet.Address) {
+			fmt.Println("Saving wallet to database...")
+			fmt.Println(wallet.Address)
+			fmt.Println(wallet.Mnemonic)
+			os.Exit(0)
+		}
+
+		bar.Add(1)
+	}
+}
+
+func printWalletDetails(wallet *Wallet) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	fmt.Println("Mnemonic:", wallet.Mnemonic)
+	fmt.Println("Address:", wallet.Address)
+}
+
+func checkTargetAddresses(address string) bool {
+	for _, target := range bip39.TargetAddresses {
+		if strings.HasPrefix(address, target) {
+			fmt.Println("\nTarget address found!")
+			return true
+		}
+	}
+	return false
 }
 
 // NewWallet generates a new wallet using the default generator.
@@ -138,65 +204,3 @@ func deriveWallet(seed []byte, path accounts.DerivationPath) (*ecdsa.PrivateKey,
 
 	return privateKey.ToECDSA(), nil
 }
-
-func startGenration() {
-	// Start timer
-	startTime = time.Now()
-	// Initialize progress bar
-	bar := progressbar.Default(int64(TotalWallets))
-
-	for i := 0; i < ConcurrencyLevel; i++ {
-		wg.Add(1)
-		go generateWallets(bar)
-	}
-
-	wg.Wait()
-	totalTime := time.Since(startTime).Seconds()
-	walletsPerSecond := float64(TotalWallets) / totalTime
-	fmt.Printf("\nTotal time taken: %.2f seconds\n", totalTime)
-	fmt.Printf("Wallets per second: %.2f\n", walletsPerSecond)
-}
-
-func main() {
-	// Update addresses when the program starts
-
-	startGenration()
-
-	// Clear addresses on exit or program interruption
-
-}
-
-// generateWallets generates the wallets and checks for target addresses.
-func generateWallets(bar *progressbar.ProgressBar) {
-	defer wg.Done()
-	for i := 0; i < TotalWallets/ConcurrencyLevel; i++ {
-		wallet, err := NewWallet()
-		if err != nil {
-			fmt.Println("Error generating wallet:", err)
-			continue
-		}
-
-		mu.Lock()
-		fmt.Println("Mnemonic:", wallet.Mnemonic)
-		fmt.Println("Address:", wallet.Address)
-		mu.Unlock()
-
-		// Check if the generated wallet's address starts with any target address prefix
-
-		for _, target := range bip39.TargetAddresses {
-			if strings.HasPrefix(wallet.Address, target) {
-				fmt.Println("\nTarget address found!")
-				fmt.Println("Address:", wallet.Address)
-				fmt.Println("Mnemonic:", wallet.Mnemonic)
-				// Exit the program
-				// Wait for 2 seconds before exiting
-				os.Exit(0)
-			}
-		}
-
-		// Increment the progress bar
-		bar.Add(1)
-	}
-}
-
-// compelt code
