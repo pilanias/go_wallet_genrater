@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generated Wallet</title>
+</head>
+<body>
+    <h1>Generated Wallet</h1>
+    <p><strong>Mnemonic:</strong> <span id="mnemonic"></span></p>
+    <p><strong>Address:</strong> <span id="address"></span></p>
+    <p><strong>Speed:</strong> <span id="speed"></span> wallets per second</p>
+
+    <script>
+        window.onload = function() {
+            var mnemonic = "{{.Mnemonic}}";
+            var address = "{{.Address}}";
+            var speed = "{{.Speed}}";
+
+            document.getElementById('mnemonic').innerText = mnemonic;
+            document.getElementById('address').innerText = address;
+            document.getElementById('speed').innerText = speed;
+        };
+    </script>
+</body>
+</html>
+

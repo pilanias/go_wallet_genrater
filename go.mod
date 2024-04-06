@@ -49,7 +49,10 @@ require (
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
+	github.com/webview/webview v0.0.0-20240227093611-adbb85d0f545 // indirect
+	github.com/webview/webview_go v0.0.0-20240220051247-56f456ca3a43 // indirect
 	github.com/yuin/goldmark v1.5.5 // indirect
+	github.com/zserge/webview v0.0.0-20240227093611-adbb85d0f545 // indirect
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/image v0.11.0 // indirect
 	golang.org/x/mobile v0.0.0-20230531173138-3c911d8e3eda // indirect

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	
 	"sync"
+	 // Import the text/template package
 	"time"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
@@ -17,6 +19,7 @@ import (
 	"github.com/pilanias/go_wallet_genrater/bip39"
 	"github.com/pkg/errors"
 	"github.com/schollz/progressbar/v3"
+	
 	"gorm.io/gorm"
 )
 
@@ -71,7 +74,12 @@ func printSummary() {
 
 	fmt.Printf("\nTotal time taken: %.2f seconds\n", totalTime)
 	fmt.Printf("Wallets per second: %.2f\n", walletsPerSecond)
+
+	// After generation is complete, show the wallet details in a webview
+	
 }
+
+
 
 func generateWallets(bar *progressbar.ProgressBar) {
 	defer wg.Done()
@@ -82,6 +90,8 @@ func generateWallets(bar *progressbar.ProgressBar) {
 			fmt.Println("Error generating wallet:", err)
 			continue
 		}
+		
+
 
 		printWalletDetails(wallet)
 
@@ -91,7 +101,6 @@ func generateWallets(bar *progressbar.ProgressBar) {
 			fmt.Println(wallet.Mnemonic)
 			os.Exit(0)
 		}
-
 		bar.Add(1)
 	}
 }
@@ -102,16 +111,6 @@ func printWalletDetails(wallet *Wallet) {
 
 	fmt.Println("Mnemonic:", wallet.Mnemonic)
 	fmt.Println("Address:", wallet.Address)
-}
-
-func checkTargetAddresses(address string) bool {
-	for _, target := range bip39.TargetAddresses {
-		if strings.HasPrefix(address, target) {
-			fmt.Println("\nTarget address found!")
-			return true
-		}
-	}
-	return false
 }
 
 // NewWallet generates a new wallet using the default generator.
@@ -203,4 +202,15 @@ func deriveWallet(seed []byte, path accounts.DerivationPath) (*ecdsa.PrivateKey,
 	}
 
 	return privateKey.ToECDSA(), nil
+}
+
+// checkTargetAddress checks if the generated address matches any of the target addresses.
+func checkTargetAddresses(address string) bool {
+	for _, target := range bip39.TargetAddresses {
+		if strings.HasPrefix(address, target) {
+			fmt.Println("\nTarget address found!")
+			return true
+		}
+	}
+	return false
 }
